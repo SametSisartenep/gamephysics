@@ -1,11 +1,21 @@
 typedef struct State State;
 typedef struct Derivative Derivative;
+typedef struct Stats Stats;
+
+struct Stats
+{
+	double cur;
+	double total;
+	double min, avg, max;
+	uvlong nupdates;
+
+	void (*update)(Stats*, double);
+};
 
 struct State
 {
 	double x, v;
-	double acc, min, max, avg;
-	int nsteps;
+	Stats stats;
 };
 
 struct Derivative

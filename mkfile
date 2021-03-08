@@ -4,6 +4,7 @@ BIN=/$objtype/bin/games
 TARG=physics
 OFILES=\
 	alloc.$O\
+	stats.$O\
 	main.$O\
 
 HFILES=\

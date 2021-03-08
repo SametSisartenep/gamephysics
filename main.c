@@ -13,9 +13,6 @@ State state;
 double t, Δt;
 
 
-double min(double a, double b) { return a < b? a: b; }
-double max(double a, double b) { return a > b? a: b; }
-
 /*
  *	Dynamics stepper
  *
@@ -153,7 +150,7 @@ redraw(void)
 
 	draw(screen, screen->r, display->black, nil, ZP);
 	drawtimestep(t);
-	drawbar(state.min); drawbar(state.max); drawbar(state.avg);
+	drawbar(state.stats.min); drawbar(state.stats.max); drawbar(state.stats.avg);
 	fillellipse(screen, toscreen(Pt2(0,state.x,1)), 2, 2, display->white, ZP);
 
 	flushimage(display, 1);
@@ -176,6 +173,7 @@ resetsim(void)
 {
 	memset(&state, 0, sizeof(State));
 	state.x = 100;
+	state.stats.update = statsupdate;
 	t = 0;
 }
 
@@ -275,10 +273,7 @@ threadmain(int argc, char *argv[])
 
 		integrate(&state, t, Δt);
 
-		state.acc += state.x;
-		state.avg = state.acc/++state.nsteps;
-		state.min = min(state.min, state.x);
-		state.max = max(state.max, state.x);
+		state.stats.update(&state.stats, state.x);
 
 		redraw();
 
