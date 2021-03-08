@@ -134,16 +134,16 @@ drawbar(double v)
 {
 	struct {
 		Point2 p0, p1;
-	} l = {
+	} bar = {
 		Pt2(-2,v,1),
 		Pt2(2,v,1)
 	};
 	char buf[32];
 
-	line(screen, toscreen(l.p0), toscreen(l.p1), 0, 0, 0, display->white, ZP);
+	line(screen, toscreen(bar.p0), toscreen(bar.p1), 0, 0, 0, display->white, ZP);
 	snprint(buf, sizeof buf, "%.3f", v);
-	l.p1.x += 10;
-	string(screen, toscreen(l.p1), display->white, ZP, font, buf);
+	bar.p1.x += 10;
+	string(screen, toscreen(bar.p1), display->white, ZP, font, buf);
 }
 
 void
