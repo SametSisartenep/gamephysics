@@ -10,7 +10,7 @@
 
 RFrame screenrf;
 State state;
-double timestep;
+double t, Δt;
 
 
 double min(double a, double b) { return a < b? a: b; }
@@ -152,7 +152,7 @@ redraw(void)
 	lockdisplay(display);
 
 	draw(screen, screen->r, display->black, nil, ZP);
-	drawtimestep(timestep);
+	drawtimestep(t);
 	drawbar(state.min); drawbar(state.max); drawbar(state.avg);
 	fillellipse(screen, toscreen(Pt2(0,state.x,1)), 2, 2, display->white, ZP);
 
@@ -172,6 +172,14 @@ resized(void)
 }
 
 void
+resetsim(void)
+{
+	memset(&state, 0, sizeof(State));
+	state.x = 100;
+	t = 0;
+}
+
+void
 rmb(Mousectl *mc)
 {
 	enum {
@@ -185,7 +193,7 @@ rmb(Mousectl *mc)
 
 	switch(menuhit(3, mc, &menu, _screen)){
 	case RESET:
-		//resetsim();
+		resetsim();
 		break;
 	}
 }
@@ -220,7 +228,6 @@ threadmain(int argc, char *argv[])
 	Mousectl *mc;
 	Keyboardctl *kc;
 	Rune r;
-	double t, Δt;
 
 	ARGBEGIN{
 	default: usage();
@@ -238,10 +245,8 @@ threadmain(int argc, char *argv[])
 	screenrf.bx = Vec2(1, 0);
 	screenrf.by = Vec2(0,-1);
 
-	t = 0;
 	Δt = 0.01;
-	state.x = 100;
-	state.v = 0;
+	resetsim();
 
 	display->locking = 1;
 	unlockdisplay(display);
@@ -278,7 +283,6 @@ threadmain(int argc, char *argv[])
 		redraw();
 
 		t += Δt;
-		timestep = t;
 
 		sleep(66);
 	}
