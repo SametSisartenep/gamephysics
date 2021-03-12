@@ -9,100 +9,11 @@
 #include "fns.h"
 
 RFrame screenrf;
-State state;
+GameState state;
 double t, Δt;
 
+Sprite *ghoul, *ghoulbig;
 
-/*
- *	Dynamics stepper
- *
- * 	Currently set to a basic spring-damper system.
- */
-double
-accel(State *s, double t)
-{
-	static double k = 15, b = 0.1;
-
-	USED(t);
-	return -k*s->x - b*s->v;
-}
-
-Derivative
-eval(State *s0, double t, double Δt, Derivative *d)
-{
-	State s;
-	Derivative res;
-
-	s.x = s0->x + d->dx*Δt;
-	s.v = s0->v + d->dv*Δt;
-
-	res.dx = s.v;
-	res.dv = accel(&s, t+Δt);
-	return res;
-}
-
-/*
- *	Explicit Euler Integrator
- */
-void
-euler0(State *s, double t, double Δt)
-{
-	static Derivative ZD = {0,0};
-	Derivative d;
-
-	d = eval(s, t, Δt, &ZD);
-
-	s->x += d.dx*Δt;
-	s->v += d.dv*Δt;
-}
-
-/*
- *	Semi-implicit Euler Integrator
- */
-void
-euler1(State *s, double t, double Δt)
-{
-	static Derivative ZD = {0,0};
-	Derivative d;
-
-	d = eval(s, t, Δt, &ZD);
-
-	s->v += d.dv*Δt;
-	s->x += s->v*Δt;
-}
-
-/*
- *	RK4 Integrator
- */
-void
-rk4(State *s, double t, double Δt)
-{
-	static Derivative ZD = {0,0};
-	Derivative a, b, c, d;
-	double dxdt, dvdt;
-
-	a = eval(s, t, 0, &ZD);
-	b = eval(s, t, Δt/2, &a);
-	c = eval(s, t, Δt/2, &b);
-	d = eval(s, t, Δt, &c);
-
-	dxdt = 1.0/6 * (a.dx + 2*(b.dx + c.dx) + d.dx);
-	dvdt = 1.0/6 * (a.dv + 2*(b.dv + c.dv) + d.dv);
-
-	s->x += dxdt*Δt;
-	s->v += dvdt*Δt;
-}
-
-/*
- *	The Integrator
- */
-void
-integrate(State *s, double t, double Δt)
-{
-	//euler0(s, t, Δt);
-	//euler1(s, t, Δt);
-	rk4(s, t, Δt);
-}
 
 Point
 toscreen(Point2 p)
@@ -116,6 +27,20 @@ fromscreen(Point p)
 {
 	return rframexform(Pt2(p.x,p.y,1), screenrf);
 }
+
+//void
+//drawsimstats(void)
+//{
+//	char buf[128];
+//	int i;
+//
+//	for(i = 0; i < NSTATS; i++){
+//		snprint(buf, sizeof buf, "%.3f/%.3f/%.3f[%.3f]",
+//			simstats[i].min, simstats[i].avg, simstats[i].max,
+//			simstats[i].cur);
+//		string(screen, addpt(screen->r.min, Pt(10,30+i*font->height)), display->white, ZP, font, buf);
+//	}
+//}
 
 void
 drawtimestep(double t)
@@ -153,6 +78,9 @@ redraw(void)
 	drawbar(state.stats.min); drawbar(state.stats.max); drawbar(state.stats.avg);
 	fillellipse(screen, toscreen(Pt2(0,state.x,1)), 2, 2, display->white, ZP);
 
+	ghoul->draw(ghoul, screen, toscreen(Pt2(100,-100,1)));
+	ghoulbig->draw(ghoulbig, screen, toscreen(Pt2(-100,-100,1)));
+
 	flushimage(display, 1);
 	unlockdisplay(display);
 }
@@ -171,7 +99,7 @@ resized(void)
 void
 resetsim(void)
 {
-	memset(&state, 0, sizeof(State));
+	memset(&state, 0, sizeof(GameState));
 	state.x = 100;
 	state.stats.update = statsupdate;
 	t = 0;
@@ -226,6 +154,8 @@ threadmain(int argc, char *argv[])
 	Mousectl *mc;
 	Keyboardctl *kc;
 	Rune r;
+	uvlong then, now;
+	double frametime, timeacc;
 
 	ARGBEGIN{
 	default: usage();
@@ -239,15 +169,22 @@ threadmain(int argc, char *argv[])
 		sysfatal("initmouse: %r");
 	if((kc = initkeyboard(nil)) == nil)
 		sysfatal("initkeyboard: %r");
+
+	display->locking = 1;
+	unlockdisplay(display);
+
 	screenrf.p = Pt2(screen->r.min.x+Dx(screen->r)/2,screen->r.max.y-Dy(screen->r)/2,1);
 	screenrf.bx = Vec2(1, 0);
 	screenrf.by = Vec2(0,-1);
 
+	ghoul = readsprite("assets/sheets/NpcCemet.pic", Pt(48,0), Rect(0,0,16,16), 5, 150);
+	ghoulbig = newsprite(ghoul->sheet, Pt(144,64), Rect(0,0,24,24), 5, 120);
+
 	Δt = 0.01;
+	then = nsec();
+	timeacc = 0;
 	resetsim();
 
-	display->locking = 1;
-	unlockdisplay(display);
 	redraw();
 
 	for(;;){
@@ -271,13 +208,24 @@ threadmain(int argc, char *argv[])
 			break;
 		}
 
-		integrate(&state, t, Δt);
+		now = nsec();
+		frametime = now - then;
+		then = now;
+		timeacc += frametime/1e9;
 
-		state.stats.update(&state.stats, state.x);
+		while(timeacc >= Δt){
+			integrate(&state, t, Δt);
+
+			state.stats.update(&state.stats, state.x);
+
+			timeacc -= Δt;
+			t += Δt;
+		}
+
+		ghoul->step(ghoul, frametime/1e6);
+		ghoulbig->step(ghoulbig, frametime/1e6);
 
 		redraw();
-
-		t += Δt;
 
 		sleep(66);
 	}

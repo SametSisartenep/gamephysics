@@ -5,6 +5,8 @@ TARG=physics
 OFILES=\
 	alloc.$O\
 	stats.$O\
+	physics.$O\
+	sprite.$O\
 	main.$O\
 
 HFILES=\

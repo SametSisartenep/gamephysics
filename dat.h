@@ -1,6 +1,7 @@
-typedef struct State State;
+typedef struct GameState GameState;
 typedef struct Derivative Derivative;
 typedef struct Stats Stats;
+typedef struct Sprite Sprite;
 
 struct Stats
 {
@@ -12,7 +13,7 @@ struct Stats
 	void (*update)(Stats*, double);
 };
 
-struct State
+struct GameState
 {
 	double x, v;
 	Stats stats;
@@ -21,4 +22,18 @@ struct State
 struct Derivative
 {
 	double dx, dv;
+};
+
+struct Sprite
+{
+	Image *sheet;
+	Point sp;
+	Rectangle r;
+	int nframes;
+	int curframe;
+	ulong period;
+	ulong elapsed;
+
+	void (*step)(Sprite*, ulong);
+	void (*draw)(Sprite*, Image*, Point);
 };
