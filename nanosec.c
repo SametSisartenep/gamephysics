@@ -55,40 +55,40 @@ nanosec(void)
 	if(fasthz == ~0ULL)
 		return nsec() - xstart;
 
-	/* first long in a.out header */
-	snprint(path, sizeof path, "/proc/%d/text", getpid());
-	fd = open(path, OREAD);
-	if(fd < 0)
-		goto Wallclock;
-	if(read(fd, buf, 4) != 4){
-		close(fd);
-		goto Wallclock;
-	}
-	close(fd);
-
-	w = ((ulong *) buf)[0];
-
-	switch(w){
-	default:
-		goto Wallclock;
-	case 0x978a0000:	/* amd64 */
-		/* patch out POP BP -> POP AX */
-		_cpuid[1] = 0x58;
-	case 0xeb010000:	/* 386 */
-		break;
-	}
-	segflush(_cpuid, sizeof(_cpuid));
-
-	r = cpuid(0x40000000, 0);
-	((ulong *) buf)[0] = r.bx;
-	((ulong *) buf)[1] = r.cx;
-	((ulong *) buf)[2] = r.dx;
-	buf[12] = 0;
-
-	if(strstr(buf, "bhyve") != nil)
-		goto Wallclock;
-
 	if(fasthz == 0){
+		/* first long in a.out header */
+		snprint(path, sizeof path, "/proc/%d/text", getpid());
+		fd = open(path, OREAD);
+		if(fd < 0)
+			goto Wallclock;
+		if(read(fd, buf, 4) != 4){
+			close(fd);
+			goto Wallclock;
+		}
+		close(fd);
+
+		w = ((ulong *) buf)[0];
+
+		switch(w){
+		default:
+			goto Wallclock;
+		case 0x978a0000:	/* amd64 */
+			/* patch out POP BP -> POP AX */
+			_cpuid[1] = 0x58;
+		case 0xeb010000:	/* 386 */
+			break;
+		}
+		segflush(_cpuid, sizeof(_cpuid));
+
+		r = cpuid(0x40000000, 0);
+		((ulong *) buf)[0] = r.bx;
+		((ulong *) buf)[1] = r.cx;
+		((ulong *) buf)[2] = r.dx;
+		buf[12] = 0;
+
+		if(strstr(buf, "bhyve") != nil)
+			goto Wallclock;
+
 		if(_tos->cyclefreq){
 			fasthz = _tos->cyclefreq;
 			cycles(&xstart);
