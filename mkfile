@@ -7,6 +7,7 @@ OFILES=\
 	stats.$O\
 	physics.$O\
 	sprite.$O\
+	nanosec.$O\
 	main.$O\
 
 HFILES=\

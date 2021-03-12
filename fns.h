@@ -21,3 +21,8 @@ void integrate(GameState*, double, double);
 Sprite *newsprite(Image*, Point, Rectangle, int, ulong);
 Sprite *readsprite(char*, Point, Rectangle, int, ulong);
 void delsprite(Sprite*);
+
+/*
+ *	nanosec
+ */
+uvlong nanosec(void);

@@ -181,7 +181,7 @@ threadmain(int argc, char *argv[])
 	ghoulbig = newsprite(ghoul->sheet, Pt(144,64), Rect(0,0,24,24), 5, 120);
 
 	Δt = 0.01;
-	then = nsec();
+	then = nanosec();
 	timeacc = 0;
 	resetsim();
 
@@ -208,7 +208,7 @@ threadmain(int argc, char *argv[])
 			break;
 		}
 
-		now = nsec();
+		now = nanosec();
 		frametime = now - then;
 		then = now;
 		timeacc += frametime/1e9;
