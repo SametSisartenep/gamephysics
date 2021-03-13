@@ -8,12 +8,14 @@ OFILES=\
 	physics.$O\
 	sprite.$O\
 	nanosec.$O\
+	cmixer.$O\
 	main.$O\
 
 HFILES=\
 	dat.h\
 	fns.h\
 	libgeometry/geometry.h\
+	cmixer.h\
 
 LIB=\
 	libgeometry/libgeometry.a$O\

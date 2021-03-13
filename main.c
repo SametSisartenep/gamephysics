@@ -1,5 +1,6 @@
 #include <u.h>
 #include <libc.h>
+#include <bio.h>
 #include <thread.h>
 #include <draw.h>
 #include <mouse.h>
@@ -7,6 +8,7 @@
 #include <geometry.h>
 #include "dat.h"
 #include "fns.h"
+#include "cmixer.h"
 
 RFrame screenrf;
 GameState state;
@@ -106,8 +108,9 @@ resetsim(void)
 }
 
 void
-rmb(Mousectl *mc)
+rmbproc(void *arg)
 {
+	threadsetname("rmbproc");
 	enum {
 		RESET,
 	};
@@ -116,19 +119,24 @@ rmb(Mousectl *mc)
 		nil
 	};
 	static Menu menu = { .item = items };
+	Mousectl *mc;
+
+	mc = (Mousectl*)arg;
 
 	switch(menuhit(3, mc, &menu, _screen)){
 	case RESET:
 		resetsim();
 		break;
 	}
+
+	threadexits(nil);
 }
 
 void
 mouse(Mousectl *mc, Keyboardctl *)
 {
 	if((mc->buttons & 4) != 0)
-		rmb(mc);
+		proccreate(rmbproc, mc, 2048);
 }
 
 void
@@ -138,6 +146,23 @@ key(Rune r)
 	case Kdel:
 	case 'q':
 		threadexitsall(nil);
+	}
+}
+
+void
+soundproc(void *)
+{
+	threadsetname("soundproc");
+	Biobuf *aout;
+	uchar adata[512];
+
+	aout = Bopen("/dev/audio", OWRITE);
+	if(aout == nil)
+		sysfatal("Bopen: %r");
+
+	for(;;){
+		cm_process((void *)adata, sizeof(adata)/2);
+		Bwrite(aout, adata, sizeof adata);
 	}
 }
 
@@ -156,6 +181,7 @@ threadmain(int argc, char *argv[])
 	Rune r;
 	uvlong then, now;
 	double frametime, timeacc;
+	cm_Source *bgsound, *boatsound;
 
 	ARGBEGIN{
 	default: usage();
@@ -169,6 +195,8 @@ threadmain(int argc, char *argv[])
 		sysfatal("initmouse: %r");
 	if((kc = initkeyboard(nil)) == nil)
 		sysfatal("initkeyboard: %r");
+	cm_init(44100);
+	cm_set_master_gain(0.5);
 
 	display->locking = 1;
 	unlockdisplay(display);
@@ -179,6 +207,20 @@ threadmain(int argc, char *argv[])
 
 	ghoul = readsprite("assets/sheets/NpcCemet.pic", Pt(48,0), Rect(0,0,16,16), 5, 150);
 	ghoulbig = newsprite(ghoul->sheet, Pt(144,64), Rect(0,0,24,24), 5, 120);
+
+	bgsound = cm_new_source_from_file("assets/sounds/birds.wav");
+	if(bgsound == nil)
+		sysfatal("cm_new_source_from_file: %s", cm_get_error());
+	boatsound = cm_new_source_from_file("assets/sounds/steamboat.wav");
+	if(boatsound == nil)
+		sysfatal("cm_new_source_from_file: %s", cm_get_error());
+	cm_set_loop(bgsound, 1);
+	cm_set_loop(boatsound, 1);
+	cm_set_gain(boatsound, 0.2);
+	cm_play(bgsound);
+	cm_play(boatsound);
+
+	proccreate(soundproc, nil, 2048);
 
 	Δt = 0.01;
 	then = nanosec();
