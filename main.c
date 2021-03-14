@@ -15,6 +15,7 @@ GameState state;
 double t, Δt;
 
 Sprite *ghoul, *ghoulbig;
+Sprite *ness;
 
 
 Point
@@ -82,6 +83,7 @@ redraw(void)
 
 	ghoul->draw(ghoul, screen, toscreen(Pt2(100,-100,1)));
 	ghoulbig->draw(ghoulbig, screen, toscreen(Pt2(-100,-100,1)));
+	ness->draw(ness, screen, toscreen(Pt2(-160,-120,1)));
 
 	flushimage(display, 1);
 	unlockdisplay(display);
@@ -207,6 +209,7 @@ threadmain(int argc, char *argv[])
 
 	ghoul = readsprite("assets/sheets/NpcCemet.pic", Pt(48,0), Rect(0,0,16,16), 5, 150);
 	ghoulbig = newsprite(ghoul->sheet, Pt(144,64), Rect(0,0,24,24), 5, 120);
+	ness = readsprite("assets/sheets/ness.pic", Pt(0,9), Rect(0,0,16,24), 20, 150);
 
 	bgsound = cm_new_source_from_file("assets/sounds/birds.wav");
 	if(bgsound == nil)
@@ -266,6 +269,7 @@ threadmain(int argc, char *argv[])
 
 		ghoul->step(ghoul, frametime/1e6);
 		ghoulbig->step(ghoulbig, frametime/1e6);
+		ness->step(ness, frametime/1e6);
 
 		redraw();
 
